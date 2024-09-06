@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Mashup App</title>
+    <title>Music Finder</title>
     <style>
         body { font-family: Arial, sans-serif; }
         .container { max-width: 600px; margin: 50px auto; }
@@ -18,7 +18,7 @@
 
 <div class="container">
     <h1>Music Finder</h1>
-    <h3>Search for your music here =W=</h3>
+    <h3>Search for your music here</h3>
     <div class="form-group">
         <label for="artist">Artist</label>
         <input type="text" id="artist" placeholder="Enter artist name">
@@ -50,7 +50,7 @@
                     <a href="${data.youtubeSearch}" target="_blank">Click here to watch on YouTube</a>
                 `;
 
-                // Display lyrics
+                // Display lyrics as HTML (ensure <br> tags are rendered as line breaks)
                 document.getElementById('lyrics').innerHTML = `
                     <h3>Lyrics:</h3>
                     <p>${data.lyrics}</p>
