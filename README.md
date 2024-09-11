@@ -1,4 +1,4 @@
-# musicFinder
+# musicFinder 🎸
 
 musicFinder is a Java-based web application that allows users to search for songs, fetch their lyrics, and generate related YouTube video search links. The application uses a Spring Boot backend with integrated APIs to fetch song lyrics and generate YouTube search links based on song and artist name inputs.
 
