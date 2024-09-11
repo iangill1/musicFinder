@@ -74,7 +74,7 @@ This will download the dependencies and create a runnable JAR file in the `targe
 
 After building the project, you can run it locally using Maven:
 ```
-mvn spring-boot
+mvn spring-boot:run
 ```
 
 2. Access the Application:
