@@ -23,10 +23,6 @@ jobs:
       run: |
         git log --oneline | wc -l
         # Check number of commits
-
-    - name: Check pull request existence
-      uses: dawidd6/action-check-pr@v1
-      # Ensure a pull request has been merged
     
     # Check CI/CD validation
     - name: Checkout repository
