@@ -1,0 +1,67 @@
+name: Checking AS01 Build 
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check-repo:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Check number of branches
+      run: |
+        git fetch --all
+        git branch -r | grep -v main | wc -l
+        # Check for non-main branches
+
+    - name: Check commit history
+      run: |
+        git log --oneline | wc -l
+        # Check number of commits
+
+    - name: Check pull request existence
+      uses: dawidd6/action-check-pr@v1
+      # Ensure a pull request has been merged
+    
+    # Check CI/CD validation
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Validate CI workflow file
+      run: |
+        if [ -f ".github/workflows/ci.yml" ]; then
+          echo "CI pipeline file found."
+        else
+          echo "CI pipeline file is missing."
+          exit 1
+        fi
+        
+    # App running    
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Build Docker image
+      run: |
+        docker build -t musicfinder .
+        docker run -d -p 8080:8080 musicfinder
+
+    - name: Check if app is running on port 8080
+      run: |
+        curl --fail http://localhost:8080 || exit 1
+
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Build with Maven
+      run: mvn clean install
+
+    - name: Run Application and Test API
+      run: |
+        mvn spring-boot:run &
+        sleep 10
+        curl --fail http://localhost:8080/song/Coldplay/Yellow || exit 1
