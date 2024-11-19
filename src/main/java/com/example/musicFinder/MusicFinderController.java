@@ -79,10 +79,19 @@ public class MusicFinderController {
     // Note to students: You need to complete the refactoring challenges - see the assignment worksheet for details.
 
     private final Logger logger;
+    private final SearchProvider youtubeProvider;
+    private final SearchProvider lyricsProvider;
+    private final SearchStrategy exactSearchStrategy;
+    private final SearchStrategy fuzzySearchStrategy;
 
     @Autowired
     public MusicFinderController(Logger logger) {
         this.logger = logger;
+        // Pre-decorate the providers with caching
+        this.youtubeProvider = new CacheDecorator(new YouTubeSearchProviderFactory().createProvider());
+        this.lyricsProvider = new CacheDecorator(new LyricsSearchProviderFactory().createProvider());
+        this.exactSearchStrategy = new CacheDecoratorStrategy(new ExactSearchStrategy());
+        this.fuzzySearchStrategy = new CacheDecoratorStrategy(new FuzzySearchStrategy());
     }
 
     @GetMapping("/findMusic")
@@ -100,8 +109,10 @@ public class MusicFinderController {
         // Choose the provider factory
         if ("youtube".equalsIgnoreCase(provider)) {
             factory = new YouTubeSearchProviderFactory();
-        } else {
+        } else if ("lyrics".equalsIgnoreCase(provider)) {
             factory = new LyricsSearchProviderFactory();
+        } else {
+            throw new IllegalArgumentException("Unsupported provider: " + provider);
         }
     
         SearchProvider searchProvider = factory.createProvider();
@@ -109,18 +120,19 @@ public class MusicFinderController {
     }
     
     @GetMapping("/findMusic/decorator")
-    public String findMusicDecarator(@RequestParam String artist, @RequestParam String song, @RequestParam String provider) {
-        SearchProviderFactory factory;
+    public String findMusicDecorator(@RequestParam String artist, @RequestParam String song, @RequestParam String provider) {
+        SearchProvider searchProvider;
 
-        // Choose the provider factory
+        // Select the pre-decorated provider
         if ("youtube".equalsIgnoreCase(provider)) {
-            factory = new YouTubeSearchProviderFactory();
+            searchProvider = youtubeProvider;
+        } else if ("lyrics".equalsIgnoreCase(provider)) {
+            searchProvider = lyricsProvider;
         } else {
-            factory = new LyricsSearchProviderFactory();
+            throw new IllegalArgumentException("Unsupported provider: " + provider);
         }
 
-        // Decorate with caching
-        SearchProvider searchProvider = new CacheDecorator(factory.createProvider());
+        // Use the cached provider
         return searchProvider.search(artist, song);
     }
 
@@ -130,13 +142,15 @@ public class MusicFinderController {
 
         // Choose the search strategy
         if ("exact".equalsIgnoreCase(strategy)) {
-            searchStrategy = new ExactSearchStrategy();
+            searchStrategy = exactSearchStrategy;
+        } else if  ("fuzzy".equalsIgnoreCase(strategy)) {
+            searchStrategy = fuzzySearchStrategy;
         } else {
-            searchStrategy = new FuzzySearchStrategy();
+            throw new IllegalArgumentException("Unsupported strategy: " + strategy);
         }
 
         // Decorate the strategy with caching
         // Bonus: Implement the CacheDecoratorStrategy class
-        return "";
+        throw new UnsupportedOperationException("Unimplemented method 'findMusic/strategy' - with decorator caching");
     }
 }

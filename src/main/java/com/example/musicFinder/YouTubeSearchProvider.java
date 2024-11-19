@@ -4,7 +4,7 @@ public class YouTubeSearchProvider implements SearchProvider {
 
     @Override
     public String search(String artist, String song) {
-        return "";
+        throw new UnsupportedOperationException("Unimplemented method 'search'");
     }
     
 }

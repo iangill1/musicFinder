@@ -1,6 +1,7 @@
 package com.example.musicFinder;
 
 public class CacheDecorator implements SearchProvider {
+    
     private final SearchProvider searchProvider;
 
     public CacheDecorator(SearchProvider searchProvider) {
@@ -9,7 +10,8 @@ public class CacheDecorator implements SearchProvider {
 
     @Override
     public String search(String artist, String song) {
-        // TODO Auto-generated method stub
+        // Use the CacheService to cache the search results, and to check if the search results are already cached
+        // Use "Cached Result:" as a prefix for the cached results to differentiate them from the direct fetch of uncached search results
         throw new UnsupportedOperationException("Unimplemented method 'search'");
     }
 }

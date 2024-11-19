@@ -1,7 +1,11 @@
 package com.example.musicFinder;
 
+import org.springframework.stereotype.Component;
+
+@Component
 public class Logger {
-    void logMessage(String message) {
+
+    public void logMessage(String message) {
        //
     }
 }
