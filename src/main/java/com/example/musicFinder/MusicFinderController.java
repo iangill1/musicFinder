@@ -3,8 +3,11 @@ package com.example.musicFinder;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.RestTemplate;
 
@@ -46,8 +49,6 @@ public class MusicFinderController {
         }
     }
     
-    
-    
     // Generate YouTube search link based on artist and song
     private String getYouTubeSearchUrl(String artist, String song) {
         String searchQuery = artist.replace(" ", "+") + "+" + song.replace(" ", "+");
@@ -72,5 +73,70 @@ public class MusicFinderController {
 
         // Return the JSON response
         return response;
+    }
+
+    // These API end-points are added for AS03 Refactoring and Deployment
+    // Note to students: You need to complete the refactoring challenges - see the assignment worksheet for details.
+
+    private final Logger logger;
+
+    @Autowired
+    public MusicFinderController(Logger logger) {
+        this.logger = logger;
+    }
+
+    @GetMapping("/findMusic")
+    public String findMusic(@RequestParam String artist, @RequestParam String song) {
+        // Use the logger to track activity
+        logger.logMessage("Searching for: " + artist + " - " + song);
+        // API logic to find song lyrics and YouTube video...
+        return "Results for " + artist + " - " + song;
+    }
+
+    @GetMapping("/findMusic/factory")
+    public String findMusicFactory(@RequestParam String artist, @RequestParam String song, @RequestParam String provider) {
+        SearchProviderFactory factory;
+    
+        // Choose the provider factory
+        if ("youtube".equalsIgnoreCase(provider)) {
+            factory = new YouTubeSearchProviderFactory();
+        } else {
+            factory = new LyricsSearchProviderFactory();
+        }
+    
+        SearchProvider searchProvider = factory.createProvider();
+        return searchProvider.search(artist, song);
+    }
+    
+    @GetMapping("/findMusic/decorator")
+    public String findMusicDecarator(@RequestParam String artist, @RequestParam String song, @RequestParam String provider) {
+        SearchProviderFactory factory;
+
+        // Choose the provider factory
+        if ("youtube".equalsIgnoreCase(provider)) {
+            factory = new YouTubeSearchProviderFactory();
+        } else {
+            factory = new LyricsSearchProviderFactory();
+        }
+
+        // Decorate with caching
+        SearchProvider searchProvider = new CacheDecorator(factory.createProvider());
+        return searchProvider.search(artist, song);
+    }
+
+    @GetMapping("/findMusic/strategy")
+    public String findMusic(@RequestParam String artist, @RequestParam String song, @RequestParam String strategy) {
+        SearchStrategy searchStrategy;
+
+        // Choose the search strategy
+        if ("exact".equalsIgnoreCase(strategy)) {
+            searchStrategy = new ExactSearchStrategy();
+        } else {
+            searchStrategy = new FuzzySearchStrategy();
+        }
+
+        // Decorate the strategy with caching
+        // Bonus: Implement the CacheDecoratorStrategy class
+        return "";
     }
 }
