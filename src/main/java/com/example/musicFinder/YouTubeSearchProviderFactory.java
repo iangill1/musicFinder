@@ -4,7 +4,7 @@ public class YouTubeSearchProviderFactory extends SearchProviderFactory {
 
     @Override
     protected SearchProvider createProvider() {
-        throw new UnsupportedOperationException("Unimplemented method 'createProvider'");
+        return null; // dummy implementation for build/test
     }
     
 }
