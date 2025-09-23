@@ -51,7 +51,7 @@ Before you begin, make sure you have the following installed on your machine:
 
 Clone the musicFinder repository to your local machine:
 ```
-git clone https://github.com/yourusername/musicFinder.git 
+git clone https://github.com/eiramlan/musicFinder.git 
 cd musicFinder
 ```
 
