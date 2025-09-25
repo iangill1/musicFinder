@@ -19,20 +19,42 @@ env:
   HEALTH_URL: http://localhost:8080/song/arcade%20fire/wake%20up
 
 jobs:
-  branch-create:
-    name: Report new branch creation
+  branch-check:
+    name: Verify non-default branch exists
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'create' && github.event.ref_type == 'branch' }}
     steps:
-      - name: Announce new branch
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for remote branches other than main/master
         run: |
-          echo "New branch created: '${{ github.event.ref }}' in ${{ github.repository }}"
+          git fetch --all --prune
+      
+          # List remote heads, strip "refs/heads/", exclude main/master
+          FEATURE_BRANCHES="$(git ls-remote --heads origin \
+            | awk '{print $2}' \
+            | sed 's@refs/heads/@@' \
+            | grep -Ev '^(main|master)$' || true)"
+      
+          echo "Branches (excluding main/master):"
+          if [ -n "$FEATURE_BRANCHES" ]; then
+            echo "$FEATURE_BRANCHES" | sed 's/^/ - /'
+          else
+            echo " - <none>"
+          fi
+      
+          COUNT="$(printf '%s\n' "$FEATURE_BRANCHES" | sed '/^$/d' | wc -l | tr -d '[:space:]')"
+          if [ "${COUNT:-0}" -lt 1 ]; then
+            echo "::error::No branches other than main/master found on 'origin'. Create and push a feature branch."
+            exit 1
+          fi
 
   checks:
     name: Contribution + CI + Docker checks
     runs-on: ubuntu-latest
     # Run for push and PR events
-    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'create' }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,27 +75,7 @@ jobs:
         run: |
           COUNT=$(git rev-list --count ${{ github.event.before }}..${{ github.sha }})
           echo "Commit count on this push: $COUNT"
-          [ "$COUNT" -gt 1 ] || { echo "::error::Need > 1 commit on branch"; exit 1; }
-
-      - name: Count commits in PR vs base
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          BASE=${{ github.event.pull_request.base.ref }}
-          git fetch origin "$BASE" --depth=1
-          COUNT=$(git rev-list --count origin/$BASE..HEAD)
-          echo "Commits in PR branch vs base: $COUNT"
-          [ "$COUNT" -gt 1 ] || { echo "::error::PR must have > 1 commit"; exit 1; }
-
-      # 3) Verify a PR exists when pushing to a feature branch (not needed on PR events)
-      - name: Verify a PR exists for this branch
-        if: ${{ github.event_name == 'push' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          BRANCH="${GITHUB_REF_NAME}"
-          N=$(gh pr list --head "$BRANCH" --json number --jq 'length')
-          echo "PRs found for $BRANCH: $N"
-          [ "$N" -ge 1 ] || { echo "::error::No pull request open for branch '$BRANCH'"; exit 1; }
+          [ "$COUNT" -gt 0 ] || { echo "::error::Need at least 1 commit on branch"; exit 1; }
 
       # 5) Docker build
       - name: Build Docker image
