@@ -1,20 +1,16 @@
 name: AS01 - Test MusicFinder API
 
 on:
-  create:            # 1) Detect new branches
-  push:              # 2) Enforce commit-count, PR presence, Docker build/run
-    branches-ignore:
-      - main
-      - master
-  pull_request:      # 3) Run on PRs too
+  push
+  pull_request
+  create
+  workflow_dispatch
 
 permissions:
   contents: read
 
 env:
-  # External port on the runner
   APP_PORT: 8080
-  # The port your app listens to INSIDE the container (change if not 8080)
   INTERNAL_PORT: 8080
   CONTAINER_NAME: app-under-test
   HEALTH_URL: http://localhost:8080/song/arcade%20fire/wake%20up
