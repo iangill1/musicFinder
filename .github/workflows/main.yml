@@ -1,0 +1,110 @@
+name: AS01 - Test MusicFinder API
+
+on:
+  create:            # 1) Detect new branches
+  push:              # 2) Enforce commit-count, PR presence, Docker build/run
+    branches-ignore:
+      - main
+      - master
+  pull_request:      # 3) Run on PRs too
+
+permissions:
+  contents: read
+
+env:
+  # External port on the runner
+  APP_PORT: 8080
+  # The port your app listens to INSIDE the container (change if not 8080)
+  INTERNAL_PORT: 8080
+  CONTAINER_NAME: app-under-test
+  HEALTH_URL: http://localhost:8080/song/arcade%20fire/wake%20up
+
+jobs:
+  branch-create:
+    name: Report new branch creation
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'create' && github.event.ref_type == 'branch' }}
+    steps:
+      - name: Announce new branch
+        run: |
+          echo "New branch created: '${{ github.event.ref }}' in ${{ github.repository }}"
+
+  checks:
+    name: Contribution + CI + Docker checks
+    runs-on: ubuntu-latest
+    # Run for push and PR events
+    if: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 4) Check another workflow called ci.yml exists
+      - name: Ensure .github/workflows/ci.yml exists
+        run: |
+          test -f .github/workflows/ci.yml || {
+            echo "::error file=.github/workflows/ci.yml::Missing workflow 'ci.yml'";
+            exit 1;
+          }
+
+      # 2) Number of commits should be > 1
+      - name: Count commits on push
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          COUNT=$(git rev-list --count ${{ github.event.before }}..${{ github.sha }})
+          echo "Commit count on this push: $COUNT"
+          [ "$COUNT" -gt 1 ] || { echo "::error::Need > 1 commit on branch"; exit 1; }
+
+      - name: Count commits in PR vs base
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          BASE=${{ github.event.pull_request.base.ref }}
+          git fetch origin "$BASE" --depth=1
+          COUNT=$(git rev-list --count origin/$BASE..HEAD)
+          echo "Commits in PR branch vs base: $COUNT"
+          [ "$COUNT" -gt 1 ] || { echo "::error::PR must have > 1 commit"; exit 1; }
+
+      # 3) Verify a PR exists when pushing to a feature branch (not needed on PR events)
+      - name: Verify a PR exists for this branch
+        if: ${{ github.event_name == 'push' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          N=$(gh pr list --head "$BRANCH" --json number --jq 'length')
+          echo "PRs found for $BRANCH: $N"
+          [ "$N" -ge 1 ] || { echo "::error::No pull request open for branch '$BRANCH'"; exit 1; }
+
+      # 5) Docker build
+      - name: Build Docker image
+        run: |
+          docker build -t app:${{ github.sha }} .
+
+      # 6) Docker run + API probe of the exact endpoint
+      - name: Run container
+        run: |
+          docker run -d --rm --name "$CONTAINER_NAME" -p ${APP_PORT}:${INTERNAL_PORT} app:${{ github.sha }}
+          docker ps
+
+      - name: Probe API endpoint
+        run: |
+          echo "Probing: $HEALTH_URL"
+          for i in $(seq 1 30); do
+            if curl -fsS "$HEALTH_URL" > response.json 2>/dev/null; then
+              echo "Endpoint responded (showing first 500 bytes):"
+              head -c 500 response.json || true
+              exit 0
+            fi
+            echo "Attempt $i/30: not ready yet..."
+            sleep 3
+          done
+          echo "::error::API did not become ready at $HEALTH_URL"
+          echo "Recent container logs:"
+          docker logs "$CONTAINER_NAME" || true
+          exit 1
+
+      - name: Stop container
+        if: always()
+        run: |
+          docker stop "$CONTAINER_NAME" >/dev/null 2>&1 || true
