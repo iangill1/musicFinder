@@ -21,3 +21,16 @@ jobs:
           distribution: 'temurin'
       - name: Build with Maven
         run: mvn -B clean install
+      - name: Build Docker image
+        run: docker build -t musicfinder .
+      - name: Run Docker container
+        run: |
+          docker run -d -p 8080:8080 --name musicfinder_test musicfinder
+          sleep 10
+      - name: Check container accessibility
+        run: |
+          curl --fail http://localhost:8080 || (echo "App not accessible on port 8080" && exit 1)
+      - name: Stop and remove container
+        run: |
+          docker stop musicfinder_test
+          docker rm musicfinder_test
